@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encryption Tool Web App</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<style>
+.fade-in {
+  animation: fadeIn 1s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body class="bg-gradient-to-br from-blue-100 via-white to-blue-200 min-h-screen flex justify-center items-center">
+
+<div class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md fade-in">
+  <div class="flex flex-col items-center mb-4">
+    <lottie-player src="https://assets3.lottiefiles.com/packages/lf20_touohxv0.json" background="transparent" speed="1" style="width: 100px; height: 100px;" autoplay></lottie-player>
+    <h2 class="text-2xl font-bold text-blue-600 text-center">🔐 Modern Encryption Tool</h2>
+    <p class="text-gray-500 text-sm text-center">Caesar & XOR Cipher (Text + File)</p>
+  </div>
+
+  <label class="block mt-4 font-semibold text-gray-700">Select Cipher:</label>
+  <select id="method" class="border rounded-lg w-full p-2 mt-1 focus:ring-2 focus:ring-blue-400">
+    <option value="caesar">Caesar Cipher</option>
+    <option value="xor">XOR Cipher</option>
+  </select>
+
+  <label class="block mt-4 font-semibold text-gray-700">Enter Key:</label>
+  <input type="text" id="key" class="border rounded-lg w-full p-2 mt-1 focus:ring-2 focus:ring-blue-400" placeholder="For Caesar: number, XOR: one character">
+
+  <label class="block mt-4 font-semibold text-gray-700">Enter Message:</label>
+  <textarea id="message" class="border rounded-lg w-full p-2 mt-1 h-24 focus:ring-2 focus:ring-blue-400" placeholder="Type your text here..."></textarea>
+
+  <div class="flex gap-2 mt-4">
+    <button onclick="processText('encrypt')" class="bg-blue-600 text-white px-3 py-2 rounded-lg flex-1 hover:bg-blue-700 transition">Encrypt</button>
+    <button onclick="processText('decrypt')" class="bg-green-600 text-white px-3 py-2 rounded-lg flex-1 hover:bg-green-700 transition">Decrypt</button>
+  </div>
+
+  <div class="border-t my-4"></div>
+
+  <label class="block font-semibold text-gray-700">📁 File Encryption/Decryption:</label>
+  <input type="file" id="fileInput" class="mt-2 w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400">
+  <div class="flex gap-2 mt-3">
+    <button onclick="processFile('encrypt')" class="bg-purple-600 text-white px-3 py-2 rounded-lg flex-1 hover:bg-purple-700 transition">Encrypt File</button>
+    <button onclick="processFile('decrypt')" class="bg-pink-600 text-white px-3 py-2 rounded-lg flex-1 hover:bg-pink-700 transition">Decrypt File</button>
+  </div>
+
+  <div id="output" class="mt-5 text-gray-700 bg-gray-100 p-3 rounded-lg text-sm whitespace-pre-wrap"></div>
+</div>
+
+<script>
+// ============================
+// Cipher Functions
+// ============================
+function caesarEncrypt(text, key) {
+  const k = ((key % 26) + 26) % 26;
+  let result = "";
+  for (let ch of text) {
+    if (/[a-zA-Z]/.test(ch)) {
+      let base = ch === ch.toUpperCase() ? 65 : 97;
+      result += String.fromCharCode((ch.charCodeAt(0) - base + k) % 26 + base);
+    } else {
+      result += ch;
+    }
+  }
+  return result;
+}
+function caesarDecrypt(text, key) {
+  const k = ((key % 26) + 26) % 26;
+  return caesarEncrypt(text, (26 - k) % 26);
+}
+function xorEncryptDecrypt(text, keyChar) {
+  let result = "";
+  const k = keyChar.charCodeAt(0);
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ k);
+  }
+  return result;
+}
+
+// simple HTML escape to avoid injecting raw user content into innerHTML
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+// ============================
+// Text Encryption / Decryption
+// ============================
+function processText(mode) {
+  const method = document.getElementById("method").value;
+  const keyInput = document.getElementById("key").value.trim();
+  const message = document.getElementById("message").value;
+  const outputDiv = document.getElementById("output");
+
+  if (!message || !keyInput) {
+    outputDiv.textContent = "⚠ Please enter both key and message!";
+    return;
+  }
+
+  let result = "";
+  if (method === "caesar") {
+    let key = parseInt(keyInput, 10);
+    if (isNaN(key)) {
+      outputDiv.textContent = "⚠ Caesar key must be a number!";
+      return;
+    }
+    result = (mode === "encrypt") ? caesarEncrypt(message, key) : caesarDecrypt(message, key);
+  } else if (method === "xor") {
+    if (keyInput.length !== 1) {
+      outputDiv.textContent = "⚠ XOR key must be a single character!";
+      return;
+    }
+    result = xorEncryptDecrypt(message, keyInput);
+  }
+
+  // fixed: use a string template (backticks) and escape the result
+  outputDiv.innerHTML = `<b>${mode === "encrypt" ? "🔐 Encrypted" : "🔓 Decrypted"}:</b><br><pre style="white-space:pre-wrap;margin:0;">${escapeHtml(result)}</pre>`;
+}
+
+// ============================
+// File Encryption / Decryption
+// ============================
+function processFile(mode) {
+  const fileInput = document.getElementById("fileInput");
+  const method = document.getElementById("method").value;
+  const keyInput = document.getElementById("key").value.trim();
+  const outputDiv = document.getElementById("output");
+
+  if (!fileInput.files[0]) {
+    outputDiv.textContent = "⚠ Please select a file!";
+    return;
+  }
+  if (!keyInput) {
+    outputDiv.textContent = "⚠ Please enter a key!";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    let processedText = "";
+
+    if (method === "caesar") {
+      let key = parseInt(keyInput, 10);
+      if (isNaN(key)) {
+        outputDiv.textContent = "⚠ Caesar key must be a number!";
+        return;
+      }
+      processedText = (mode === "encrypt") ? caesarEncrypt(text, key) : caesarDecrypt(text, key);
+    } else if (method === "xor") {
+      if (keyInput.length !== 1) {
+        outputDiv.textContent = "⚠ XOR key must be a single character!";
+        return;
+      }
+      processedText = xorEncryptDecrypt(text, keyInput);
+    }
+
+    const blob = new Blob([processedText], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = (mode === "encrypt" ? "encrypted_" : "decrypted_") + fileInput.files[0].name;
+    link.click();
+
+    // fixed: use a string template for status message
+    outputDiv.textContent = `✅ File ${mode === "encrypt" ? "encrypted" : "decrypted"} successfully!`;
+  };
+  reader.readAsText(fileInput.files[0]);
+}
+</script>
+</body>
+</html>
